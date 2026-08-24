@@ -25,6 +25,8 @@ import {
 
 const ALPHABET = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
 const COMMON_NGRAMS = ["QUE", "DE", "LA", "EL", "EN", "ES", "LOS", "DEL", "LAS", "UN", "CON", "POR"];
+const COPRIME_VALUES = [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26];
+const COMMON_PLAINTEXT_LETTERS = ["E", "A"];
 const chartConfig = {
   count: {
     label: "Frecuencia",
@@ -62,6 +64,21 @@ function decryptCaesar(text: string, shift: number) {
     .join("");
 }
 
+function modularInverse(value: number) {
+  return COPRIME_VALUES.find((candidate) => (value * candidate) % ALPHABET.length === 1) ?? 0;
+}
+
+function decryptAffine(text: string, a: number, b: number) {
+  const inverse = modularInverse(a);
+  return text
+    .split("")
+    .map((character) => {
+      const position = ALPHABET.indexOf(character);
+      return ALPHABET[((inverse * (position - b)) % ALPHABET.length + ALPHABET.length) % ALPHABET.length];
+    })
+    .join("");
+}
+
 function scoreCandidate(text: string) {
   return COMMON_NGRAMS.reduce(
     (score, ngram) => score + (text.match(new RegExp(ngram, "g"))?.length ?? 0),
@@ -73,6 +90,8 @@ export default function Home() {
   const [rawText, setRawText] = useState("");
   const [selectedShift, setSelectedShift] = useState<number | null>(null);
   const [isBruteForceOpen, setIsBruteForceOpen] = useState(false);
+  const [affineA, setAffineA] = useState("5");
+  const [affineB, setAffineB] = useState("7");
   const normalizedText = useMemo(() => normalizeText(rawText), [rawText]);
   const ic = useMemo(() => calculateIc(normalizedText), [normalizedText]);
   const frequencies = useMemo(() => {
@@ -80,6 +99,10 @@ export default function Home() {
     for (const character of normalizedText) counts.set(character, (counts.get(character) ?? 0) + 1);
     return [...ALPHABET].map((character) => ({ character, count: counts.get(character) ?? 0 }));
   }, [normalizedText]);
+  const rankedFrequencies = useMemo(
+    () => [...frequencies].sort((first, second) => second.count - first.count),
+    [frequencies],
+  );
   const candidates = useMemo(
     () => Array.from({ length: 27 }, (_, shift) => {
       const text = decryptCaesar(normalizedText, shift);
@@ -88,6 +111,33 @@ export default function Home() {
     [normalizedText],
   );
   const selectedCandidate = candidates.find(({ shift }) => shift === selectedShift);
+  const affineCandidates = useMemo(() => {
+    const frequentCipherLetters = rankedFrequencies.filter(({ count }) => count > 0).slice(0, 2);
+    return frequentCipherLetters.flatMap(({ character: cipherLetter }) =>
+      COMMON_PLAINTEXT_LETTERS.flatMap((plaintextLetter) =>
+        COPRIME_VALUES.map((a) => {
+          const cipherPosition = ALPHABET.indexOf(cipherLetter);
+          const plaintextPosition = ALPHABET.indexOf(plaintextLetter);
+          const b = (cipherPosition - a * plaintextPosition + ALPHABET.length) % ALPHABET.length;
+          const text = decryptAffine(normalizedText, a, b);
+          return { a, b, text, score: scoreCandidate(text), cipherLetter, plaintextLetter };
+        }),
+      ),
+    )
+      .sort((first, second) => second.score - first.score)
+      .filter((candidate, index, all) => all.findIndex((item) => item.a === candidate.a && item.b === candidate.b) === index)
+      .slice(0, 10);
+  }, [normalizedText, rankedFrequencies]);
+  const affineAValue = Number(affineA);
+  const affineBValue = Number(affineB);
+  const isAffineKeyValid = Number.isInteger(affineAValue)
+    && COPRIME_VALUES.includes(affineAValue)
+    && Number.isInteger(affineBValue)
+    && affineBValue >= 0
+    && affineBValue < ALPHABET.length;
+  const manualAffineText = isAffineKeyValid
+    ? decryptAffine(normalizedText, affineAValue, affineBValue)
+    : "";
 
   return (
     <main className="min-h-screen bg-white px-4 py-10 text-foreground sm:px-8">
@@ -95,7 +145,7 @@ export default function Home() {
         <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Proyecto 1 / Criptoanálisis</p>
           <h1 className="text-3xl font-semibold tracking-tight">Cifrado César</h1>
-          <p className="max-w-2xl text-muted-foreground">Normaliza el criptograma, calcula su índice de coincidencia y prueba los 27 desplazamientos.</p>
+          <p className="max-w-2xl text-muted-foreground">Normaliza el criptograma, calcula su IC e identifica si corresponde a César o Afín.</p>
         </header>
 
         <Card>
@@ -112,8 +162,8 @@ export default function Home() {
               aria-label="Texto del criptograma"
             />
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-              <span className={normalizedText.length >= 400 ? "text-green-700" : "text-amber-700"}>
-                {normalizedText.length} caracteres normalizados{normalizedText.length < 400 && " (mínimo recomendado: 400)"}
+              <span className="text-green-700">
+                {normalizedText.length} caracteres normalizados
               </span>
               <span className="font-medium">Alfabeto: 27 caracteres</span>
             </div>
@@ -134,7 +184,11 @@ export default function Home() {
               <div className="rounded-lg bg-muted p-3 text-sm">
                 <p className="font-medium">Interpretación</p>
                 <p className="mt-1 text-muted-foreground">
-                  {ic >= 0.06 ? "Compatible con una sustitución monoalfabética." : ic >= 0.03 ? "IC bajo: conviene revisar si el cifrado es polialfabético." : "Introduce un texto más largo para obtener un diagnóstico fiable."}
+                  {ic >= 0.06
+                    ? "Cifrado monoalfabético: puede ser César o Afín."
+                    : ic >= 0.03
+                      ? "IC bajo: conviene revisar si el cifrado es polialfabético."
+                      : "IC insuficiente para identificar el tipo de cifrado."}
                 </p>
               </div>
               <div>
@@ -189,6 +243,83 @@ export default function Home() {
             </Card>
           </Collapsible>
         </section>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-1.5">
+                <CardTitle>Cifrado Afín</CardTitle>
+                <CardDescription>
+                  Ataque por análisis de frecuencias: se prueban E y A como posibles letras del texto original.
+                </CardDescription>
+              </div>
+              <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Clave a</span>
+                  <input
+                    className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:w-24"
+                    type="number"
+                    min="0"
+                    max="26"
+                    step="1"
+                    value={affineA}
+                    onChange={(event) => setAffineA(event.target.value)}
+                    aria-label="Valor a de la clave afín"
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Clave b</span>
+                  <input
+                    className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:w-24"
+                    type="number"
+                    min="0"
+                    max="26"
+                    step="1"
+                    value={affineB}
+                    onChange={(event) => setAffineB(event.target.value)}
+                    aria-label="Valor b de la clave afín"
+                  />
+                </label>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+              Fórmula de cifrado: C = ((a × m) + b) mod 27. Los valores posibles de a son coprimos con 27.
+            </div>
+            <div className={`rounded-lg border p-4 text-sm ${isAffineKeyValid ? "border-border" : "border-red-300 bg-red-50 text-red-700"}`}>
+              {isAffineKeyValid
+                ? `Clave válida: a = ${affineAValue}, b = ${affineBValue}. Se aplica la fórmula inversa para descifrar.`
+                : "Clave no válida: a debe ser coprimo con 27 y b debe estar entre 0 y 26."}
+            </div>
+            <div className="rounded-lg border border-foreground/30 bg-muted/30 p-4">
+              <p className="text-sm font-medium">Mensaje descifrado con la clave introducida</p>
+              <p className="mt-2 break-all font-mono text-sm leading-6">{manualAffineText || "..."}</p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {affineCandidates.map(({ a, b, text, score, cipherLetter, plaintextLetter }) => (
+                <div
+                  key={`${a}-${b}`}
+                  className="flex items-start gap-3 rounded-lg border border-border p-3"
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setAffineA(String(a)); setAffineB(String(b)); }}
+                  >
+                    a={a}, b={b}
+                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-1 text-xs text-muted-foreground">
+                      {cipherLetter} → {plaintextLetter} · {score} pts
+                    </p>
+                    <p className="break-all font-mono text-xs leading-5">{text || "..."}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

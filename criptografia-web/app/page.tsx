@@ -26,7 +26,6 @@ import {
 const ALPHABET = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
 const COMMON_NGRAMS = ["QUE", "DE", "LA", "EL", "EN", "ES", "LOS", "DEL", "LAS", "UN", "CON", "POR"];
 const COPRIME_VALUES = [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26];
-const COMMON_PLAINTEXT_LETTERS = ["E", "A"];
 const chartConfig = {
   count: {
     label: "Frecuencia",
@@ -99,10 +98,6 @@ export default function Home() {
     for (const character of normalizedText) counts.set(character, (counts.get(character) ?? 0) + 1);
     return [...ALPHABET].map((character) => ({ character, count: counts.get(character) ?? 0 }));
   }, [normalizedText]);
-  const rankedFrequencies = useMemo(
-    () => [...frequencies].sort((first, second) => second.count - first.count),
-    [frequencies],
-  );
   const candidates = useMemo(
     () => Array.from({ length: 27 }, (_, shift) => {
       const text = decryptCaesar(normalizedText, shift);
@@ -111,23 +106,6 @@ export default function Home() {
     [normalizedText],
   );
   const selectedCandidate = candidates.find(({ shift }) => shift === selectedShift);
-  const affineCandidates = useMemo(() => {
-    const frequentCipherLetters = rankedFrequencies.filter(({ count }) => count > 0).slice(0, 2);
-    return frequentCipherLetters.flatMap(({ character: cipherLetter }) =>
-      COMMON_PLAINTEXT_LETTERS.flatMap((plaintextLetter) =>
-        COPRIME_VALUES.map((a) => {
-          const cipherPosition = ALPHABET.indexOf(cipherLetter);
-          const plaintextPosition = ALPHABET.indexOf(plaintextLetter);
-          const b = (cipherPosition - a * plaintextPosition + ALPHABET.length) % ALPHABET.length;
-          const text = decryptAffine(normalizedText, a, b);
-          return { a, b, text, score: scoreCandidate(text), cipherLetter, plaintextLetter };
-        }),
-      ),
-    )
-      .sort((first, second) => second.score - first.score)
-      .filter((candidate, index, all) => all.findIndex((item) => item.a === candidate.a && item.b === candidate.b) === index)
-      .slice(0, 10);
-  }, [normalizedText, rankedFrequencies]);
   const affineAValue = Number(affineA);
   const affineBValue = Number(affineB);
   const isAffineKeyValid = Number.isInteger(affineAValue)
@@ -170,13 +148,14 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <section className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Diagnóstico</CardTitle>
-              <CardDescription>Índice de coincidencia del texto normalizado.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
+        <section className="grid items-start gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="flex flex-col gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Diagnóstico</CardTitle>
+                <CardDescription>Índice de coincidencia del texto normalizado.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
               <div>
                 <p className="text-4xl font-semibold tabular-nums">{ic.toFixed(4)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Fórmula: Σ fi(fi - 1) / N(N - 1)</p>
@@ -202,10 +181,13 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Collapsible open={isBruteForceOpen} onOpenChange={setIsBruteForceOpen}>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <Collapsible open={isBruteForceOpen} onOpenChange={setIsBruteForceOpen}>
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
@@ -241,85 +223,64 @@ export default function Home() {
                 </CollapsibleContent>
               </CardContent>
             </Card>
-          </Collapsible>
-        </section>
+            </Collapsible>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-1.5">
-                <CardTitle>Cifrado Afín</CardTitle>
-                <CardDescription>
-                  Ataque por análisis de frecuencias: se prueban E y A como posibles letras del texto original.
-                </CardDescription>
-              </div>
-              <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium">Clave a</span>
-                  <input
-                    className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:w-24"
-                    type="number"
-                    min="0"
-                    max="26"
-                    step="1"
-                    value={affineA}
-                    onChange={(event) => setAffineA(event.target.value)}
-                    aria-label="Valor a de la clave afín"
-                  />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium">Clave b</span>
-                  <input
-                    className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:w-24"
-                    type="number"
-                    min="0"
-                    max="26"
-                    step="1"
-                    value={affineB}
-                    onChange={(event) => setAffineB(event.target.value)}
-                    aria-label="Valor b de la clave afín"
-                  />
-                </label>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-              Fórmula de cifrado: C = ((a × m) + b) mod 27. Los valores posibles de a son coprimos con 27.
-            </div>
-            <div className={`rounded-lg border p-4 text-sm ${isAffineKeyValid ? "border-border" : "border-red-300 bg-red-50 text-red-700"}`}>
-              {isAffineKeyValid
-                ? `Clave válida: a = ${affineAValue}, b = ${affineBValue}. Se aplica la fórmula inversa para descifrar.`
-                : "Clave no válida: a debe ser coprimo con 27 y b debe estar entre 0 y 26."}
-            </div>
-            <div className="rounded-lg border border-foreground/30 bg-muted/30 p-4">
-              <p className="text-sm font-medium">Mensaje descifrado con la clave introducida</p>
-              <p className="mt-2 break-all font-mono text-sm leading-6">{manualAffineText || "..."}</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {affineCandidates.map(({ a, b, text, score, cipherLetter, plaintextLetter }) => (
-                <div
-                  key={`${a}-${b}`}
-                  className="flex items-start gap-3 rounded-lg border border-border p-3"
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { setAffineA(String(a)); setAffineB(String(b)); }}
-                  >
-                    a={a}, b={b}
-                  </Button>
-                  <div className="min-w-0 flex-1">
-                    <p className="mb-1 text-xs text-muted-foreground">
-                      {cipherLetter} → {plaintextLetter} · {score} pts
-                    </p>
-                    <p className="break-all font-mono text-xs leading-5">{text || "..."}</p>
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle>Cifrado Afín</CardTitle>
+                    <CardDescription>
+                      Introduce la clave para descifrar el mensaje con análisis de frecuencias.
+                    </CardDescription>
+                  </div>
+                  <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
+                    <label className="space-y-1 text-sm">
+                      <span className="font-medium">Clave a</span>
+                      <input
+                        className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:w-24"
+                        type="number"
+                        min="0"
+                        max="26"
+                        step="1"
+                        value={affineA}
+                        onChange={(event) => setAffineA(event.target.value)}
+                        aria-label="Valor a de la clave afín"
+                      />
+                    </label>
+                    <label className="space-y-1 text-sm">
+                      <span className="font-medium">Clave b</span>
+                      <input
+                        className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:w-24"
+                        type="number"
+                        min="0"
+                        max="26"
+                        step="1"
+                        value={affineB}
+                        onChange={(event) => setAffineB(event.target.value)}
+                        aria-label="Valor b de la clave afín"
+                      />
+                    </label>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                  Fórmula de cifrado: C = ((a × m) + b) mod 27. Los valores posibles de a son coprimos con 27.
+                </div>
+                <div className={`rounded-lg border p-4 text-sm ${isAffineKeyValid ? "border-border" : "border-red-300 bg-red-50 text-red-700"}`}>
+                  {isAffineKeyValid
+                    ? `Clave válida: a = ${affineAValue}, b = ${affineBValue}. Se aplica la fórmula inversa para descifrar.`
+                    : "Clave no válida: a debe ser coprimo con 27 y b debe estar entre 0 y 26."}
+                </div>
+                <div className="rounded-lg border border-foreground/30 bg-muted/30 p-4">
+                  <p className="text-sm font-medium">Mensaje descifrado con la clave introducida</p>
+                  <p className="mt-2 break-all font-mono text-sm leading-6">{manualAffineText || "..."}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
 
         <Card>
           <CardHeader>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,9 +10,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 
 const ALPHABET = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
 const COMMON_NGRAMS = ["QUE", "DE", "LA", "EL", "EN", "ES", "LOS", "DEL", "LAS", "UN", "CON", "POR"];
+const chartConfig = {
+  count: {
+    label: "Frecuencia",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig;
 
 function normalizeText(value: string) {
   return value
@@ -147,6 +160,24 @@ export default function Home() {
             </CardContent>
           </Card>
         </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Gráfica de frecuencias</CardTitle>
+            <CardDescription>Distribución local de las letras del criptograma normalizado.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[280px] w-full">
+              <BarChart accessibilityLayer data={frequencies} margin={{ top: 8, right: 8, left: -16, bottom: 8 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="character" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={32} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
         {selectedCandidate && (
           <Card>

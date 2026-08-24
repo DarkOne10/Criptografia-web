@@ -106,6 +106,21 @@ export default function Home() {
     [normalizedText],
   );
   const selectedCandidate = candidates.find(({ shift }) => shift === selectedShift);
+  const bestAffineCandidate = useMemo(() => {
+    if (!normalizedText) return null;
+
+    return COPRIME_VALUES.flatMap((a) =>
+      Array.from({ length: ALPHABET.length }, (_, b) => {
+        const text = decryptAffine(normalizedText, a, b);
+        return { a, b, text, score: scoreCandidate(text) };
+      }),
+    ).sort((first, second) => second.score - first.score)[0];
+  }, [normalizedText]);
+  const identifiedCipher = bestAffineCandidate
+    ? bestAffineCandidate.a === 1
+      ? "César"
+      : "Afín"
+    : null;
   const affineAValue = Number(affineA);
   const affineBValue = Number(affineB);
   const isAffineKeyValid = Number.isInteger(affineAValue)
@@ -160,14 +175,14 @@ export default function Home() {
                 <p className="text-4xl font-semibold tabular-nums">{ic.toFixed(4)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Fórmula: Σ fi(fi - 1) / N(N - 1)</p>
               </div>
-              <div className="rounded-lg bg-muted p-3 text-sm">
+              <div className={`rounded-lg border p-3 text-sm ${identifiedCipher === "César" ? "border-blue-200 bg-blue-50" : identifiedCipher === "Afín" ? "border-emerald-200 bg-emerald-50" : "border-border bg-muted"}`}>
                 <p className="font-medium">Interpretación</p>
                 <p className="mt-1 text-muted-foreground">
-                  {ic >= 0.06
-                    ? "Cifrado monoalfabético: puede ser César o Afín."
+                  {identifiedCipher
+                    ? `Cifrado identificado: ${identifiedCipher}. Mejor clave encontrada: a = ${bestAffineCandidate?.a}, b = ${bestAffineCandidate?.b}.`
                     : ic >= 0.03
                       ? "IC bajo: conviene revisar si el cifrado es polialfabético."
-                      : "IC insuficiente para identificar el tipo de cifrado."}
+                      : "Introduce un criptograma para identificar el tipo de cifrado."}
                 </p>
               </div>
               <div>

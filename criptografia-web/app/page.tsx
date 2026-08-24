@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,11 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const ALPHABET = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
 const COMMON_NGRAMS = ["QUE", "DE", "LA", "EL", "EN", "ES", "LOS", "DEL", "LAS", "UN", "CON", "POR"];
@@ -66,6 +72,7 @@ function scoreCandidate(text: string) {
 export default function Home() {
   const [rawText, setRawText] = useState("");
   const [selectedShift, setSelectedShift] = useState<number | null>(null);
+  const [isBruteForceOpen, setIsBruteForceOpen] = useState(false);
   const normalizedText = useMemo(() => normalizeText(rawText), [rawText]);
   const ic = useMemo(() => calculateIc(normalizedText), [normalizedText]);
   const frequencies = useMemo(() => {
@@ -144,21 +151,43 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Fuerza bruta</CardTitle>
-              <CardDescription>27 candidatos ordenados por coincidencias de n-gramas frecuentes.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {candidates.map(({ shift, text, score }) => (
-                <div key={shift} className={`flex items-start gap-3 rounded-lg border p-3 ${selectedShift === shift ? "border-foreground" : "border-border"}`}>
-                  <Button variant={selectedShift === shift ? "default" : "outline"} size="sm" onClick={() => setSelectedShift(shift)}>b = {shift}</Button>
-                  <p className="min-w-0 flex-1 break-all font-mono text-xs leading-5">{text || "..."}</p>
-                  <span className="shrink-0 text-xs text-muted-foreground">{score} pts</span>
+          <Collapsible open={isBruteForceOpen} onOpenChange={setIsBruteForceOpen}>
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <CardTitle>Fuerza bruta</CardTitle>
+                    <CardDescription>27 candidatos ordenados por coincidencias de n-gramas frecuentes.</CardDescription>
+                  </div>
+                  <CollapsibleTrigger
+                    className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                    aria-label={isBruteForceOpen ? "Ocultar candidatos" : "Mostrar candidatos"}
+                  >
+                      {isBruteForceOpen ? "Ocultar" : "Ver candidatos"}
+                      <ChevronDown className={`transition-transform ${isBruteForceOpen ? "rotate-180" : ""}`} />
+                  </CollapsibleTrigger>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!isBruteForceOpen && candidates[0] && (
+                  <div className="flex items-start gap-3 rounded-lg border border-foreground/30 bg-muted/30 p-3">
+                    <Button variant="default" size="sm" onClick={() => setSelectedShift(candidates[0].shift)}>b = {candidates[0].shift}</Button>
+                    <p className="min-w-0 flex-1 break-all font-mono text-xs leading-5 line-clamp-3">{candidates[0].text || "..."}</p>
+                    <span className="shrink-0 text-xs text-muted-foreground">{candidates[0].score} pts</span>
+                  </div>
+                )}
+                <CollapsibleContent className="space-y-3">
+                  {candidates.map(({ shift, text, score }) => (
+                    <div key={shift} className={`flex items-start gap-3 rounded-lg border p-3 ${selectedShift === shift ? "border-foreground" : "border-border"}`}>
+                      <Button variant={selectedShift === shift ? "default" : "outline"} size="sm" onClick={() => setSelectedShift(shift)}>b = {shift}</Button>
+                      <p className="min-w-0 flex-1 break-all font-mono text-xs leading-5">{text || "..."}</p>
+                      <span className="shrink-0 text-xs text-muted-foreground">{score} pts</span>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </CardContent>
+            </Card>
+          </Collapsible>
         </section>
 
         <Card>

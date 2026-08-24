@@ -175,11 +175,19 @@ export default function Home() {
                 <p className="text-4xl font-semibold tabular-nums">{ic.toFixed(4)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Fórmula: Σ fi(fi - 1) / N(N - 1)</p>
               </div>
-              <div className={`rounded-lg border p-3 text-sm ${identifiedCipher === "César" ? "border-blue-200 bg-blue-50" : identifiedCipher === "Afín" ? "border-emerald-200 bg-emerald-50" : "border-border bg-muted"}`}>
-                <p className="font-medium">Interpretación</p>
-                <p className="mt-1 text-muted-foreground">
+              <div className={`rounded-lg border p-4 ${identifiedCipher === "César" ? "border-blue-300 bg-blue-50" : identifiedCipher === "Afín" ? "border-emerald-300 bg-emerald-50" : "border-border bg-muted"}`}>
+                <p className="text-base font-semibold">Interpretación</p>
+                <p className="mt-2 text-base leading-7 text-muted-foreground">
                   {identifiedCipher
-                    ? `Cifrado identificado: ${identifiedCipher}. Mejor clave encontrada: a = ${bestAffineCandidate?.a}, b = ${bestAffineCandidate?.b}.`
+                    ? (
+                      <>
+                        Cifrado identificado:{" "}
+                        <span className={`inline-flex rounded-md px-2.5 py-0.5 text-lg font-bold ${identifiedCipher === "César" ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"}`}>
+                          {identifiedCipher}
+                        </span>
+                        <span className="ml-1">. Mejor clave encontrada: a = {bestAffineCandidate?.a}, b = {bestAffineCandidate?.b}.</span>
+                      </>
+                    )
                     : ic >= 0.03
                       ? "IC bajo: conviene revisar si el cifrado es polialfabético."
                       : "Introduce un criptograma para identificar el tipo de cifrado."}

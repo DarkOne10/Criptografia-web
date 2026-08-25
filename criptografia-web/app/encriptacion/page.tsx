@@ -38,14 +38,26 @@ function encryptAffine(plaintext: string, a: number, b: number) {
   }).join("");
 }
 
+function encryptVigenere(plaintext: string, key: string) {
+  if (!key) return "";
+
+  return plaintext.split("").map((character, index) => {
+    const plaintextPosition = ALPHABET.indexOf(character);
+    const keyPosition = ALPHABET.indexOf(key[index % key.length]);
+    return ALPHABET[(plaintextPosition + keyPosition) % ALPHABET.length];
+  }).join("");
+}
+
 export default function EncriptacionPage() {
   const [rawText, setRawText] = useState("");
   const [cipherMethod, setCipherMethod] = useState("cesar");
   const [shift, setShift] = useState(0);
   const [affineA, setAffineA] = useState("5");
   const [affineB, setAffineB] = useState("7");
+  const [vigenereKey, setVigenereKey] = useState("");
 
   const normalizedText = useMemo(() => normalizeText(rawText), [rawText]);
+  const normalizedVigenereKey = useMemo(() => normalizeText(vigenereKey), [vigenereKey]);
   const affineAValue = Number(affineA);
   const affineBValue = Number(affineB);
   const isAffineKeyValid = Number.isInteger(affineAValue)
@@ -55,9 +67,12 @@ export default function EncriptacionPage() {
     && affineBValue < ALPHABET.length;
   const encryptedText = useMemo(() => {
     if (cipherMethod === "cesar") return encryptCaesar(normalizedText, shift);
-    if (!isAffineKeyValid) return "";
-    return encryptAffine(normalizedText, affineAValue, affineBValue);
-  }, [normalizedText, shift, cipherMethod, affineAValue, affineBValue, isAffineKeyValid]);
+    if (cipherMethod === "afin") {
+      if (!isAffineKeyValid) return "";
+      return encryptAffine(normalizedText, affineAValue, affineBValue);
+    }
+    return encryptVigenere(normalizedText, normalizedVigenereKey);
+  }, [normalizedText, shift, cipherMethod, affineAValue, affineBValue, isAffineKeyValid, normalizedVigenereKey]);
 
   return (
     <main className="min-h-[calc(100svh-3.5rem)] bg-white px-4 py-10 sm:px-8">
@@ -65,7 +80,7 @@ export default function EncriptacionPage() {
         <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Proyecto 1 / Criptografia</p>
           <h1 className="text-3xl font-semibold tracking-tight">Encriptacion</h1>
-          <p className="max-w-2xl text-muted-foreground">Normaliza el texto y aplica un cifrado Cesar o Afin con el alfabeto espanol de 27 caracteres.</p>
+          <p className="max-w-2xl text-muted-foreground">Normaliza el texto y aplica un cifrado Cesar, Afin o Vigenere con el alfabeto espanol de 27 caracteres.</p>
         </header>
 
         <Card>
@@ -91,6 +106,7 @@ export default function EncriptacionPage() {
               >
                 <option value="cesar">Cesar</option>
                 <option value="afin">Afin</option>
+                <option value="vigenere">Vigenere</option>
               </select>
             </label>
           </CardContent>
@@ -114,7 +130,7 @@ export default function EncriptacionPage() {
                   {Array.from({ length: 27 }, (_, index) => <option key={index} value={index}>K = {index}</option>)}
                 </select>
               </label>
-            ) : (
+            ) : cipherMethod === "afin" ? (
               <div className="grid max-w-sm gap-4 sm:grid-cols-2">
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">Clave a</span>
@@ -125,6 +141,19 @@ export default function EncriptacionPage() {
                   <input className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50" type="number" min="0" max="26" step="1" value={affineB} onChange={(event) => setAffineB(event.target.value)} aria-label="Valor b de la clave afin" />
                 </label>
               </div>
+            ) : (
+              <label className="block max-w-sm space-y-1 text-sm">
+                <span className="font-medium">Palabra clave</span>
+                <input
+                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm uppercase outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  type="text"
+                  placeholder="Ejemplo: SEGURIDAD"
+                  value={vigenereKey}
+                  onChange={(event) => setVigenereKey(event.target.value)}
+                  aria-label="Palabra clave de Vigenere"
+                />
+                <span className="block text-xs text-muted-foreground">La clave se normaliza y se repite sobre todo el texto.</span>
+              </label>
             )}
 
             <div className="rounded-lg bg-muted p-3 text-sm">
@@ -132,11 +161,14 @@ export default function EncriptacionPage() {
               <p className="mt-1 text-muted-foreground">Alfabeto: A B C D E F G H I J K L M N Ñ O P Q R S T U V W X Y Z</p>
               <p className="text-muted-foreground">Limpieza: se eliminan espacios, tildes y puntuacion.</p>
               <p className="text-muted-foreground">Caja: todo el texto queda en MAYUSCULAS.</p>
-              <p className="text-muted-foreground">Formula: {cipherMethod === "cesar" ? "C = (p + K) mod 27" : "C = (a × P + b) mod 27"}</p>
+              <p className="text-muted-foreground">Formula: {cipherMethod === "cesar" ? "C = (p + K) mod 27" : cipherMethod === "afin" ? "C = (a × P + b) mod 27" : "C = (p + kᵢ) mod 27"}</p>
             </div>
 
             {cipherMethod === "afin" && !isAffineKeyValid && (
               <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">La clave no es valida: a debe ser coprimo con 27 y b debe estar entre 0 y 26.</div>
+            )}
+            {cipherMethod === "vigenere" && !normalizedVigenereKey && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700">Introduce una palabra clave con letras del alfabeto español.</div>
             )}
 
             <div className="grid gap-6 lg:grid-cols-2">
@@ -147,7 +179,7 @@ export default function EncriptacionPage() {
               </div>
               <div>
                 <h2 className="mb-2 text-sm font-medium">Texto cifrado</h2>
-                <p className="mb-3 text-sm text-muted-foreground">Metodo: {cipherMethod === "cesar" ? `Cesar | K = ${shift}` : `Afin | a = ${affineA}, b = ${affineB}`}</p>
+                <p className="mb-3 text-sm text-muted-foreground">Metodo: {cipherMethod === "cesar" ? `Cesar | K = ${shift}` : cipherMethod === "afin" ? `Afin | a = ${affineA}, b = ${affineB}` : `Vigenere | clave = ${normalizedVigenereKey || "..."}`}</p>
                 <p className="min-h-24 break-all rounded-lg bg-muted p-4 font-mono text-sm leading-6">{encryptedText || "..."}</p>
               </div>
             </div>

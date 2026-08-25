@@ -24,8 +24,11 @@ import {
 } from "@/components/ui/collapsible";
 
 const ALPHABET = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
-const COMMON_NGRAMS = ["QUE", "DE", "LA", "EL", "EN", "ES", "LOS", "DEL", "LAS", "UN", "CON", "POR"];
+const COMMON_NGRAMS = [
+  "DE", "LA", "EL", "EN", "ES", "OS", "AS", "ER", "AR", "RA", "RE", "ON", "AN", "NO", "AL", "UN", "SE", "TE", "CO", "ME", "LO", "LE", "QUE", "LOS", "DEL", "LAS", "CON", "POR", "PAR", "DES", "COM", "EST", "ENT", "RES", "ION", "UNA", "ADO", "GUE", "CIA", "PRO", "MEN", "ERA", "SEG", "DESC", "ANAL", "FREC", "LETR", "COMU", "IDIO", "PERM", "ROMP", "CIFR", "MONO", "ALFA", "RELA", "DESCR", "ANALI", "FRECU", "LETRA", "COMUN", "IDIOM", "PERMI", "ROMPE", "CIFRA", "MONOA", "RELAT", "FACIL",
+];
 const COPRIME_VALUES = [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26];
+const SPANISH_FREQUENCIES = [12.53, 1.42, 4.68, 5.86, 13.68, 0.69, 1.01, 0.7, 6.25, 0.44, 0.02, 4.97, 3.15, 6.71, 0.31, 8.68, 2.51, 6.87, 7.98, 4.63, 3.93, 0.9, 0.01, 0.22, 0.9, 0.22, 0.01];
 const chartConfig = {
   count: {
     label: "Frecuencia",
@@ -80,9 +83,82 @@ function decryptAffine(text: string, a: number, b: number) {
 
 function scoreCandidate(text: string) {
   return COMMON_NGRAMS.reduce(
-    (score, ngram) => score + (text.match(new RegExp(ngram, "g"))?.length ?? 0),
+    (score, ngram) => score + (text.match(new RegExp(ngram, "g"))?.length ?? 0) * Math.max(1, ngram.length - 1),
     0,
   );
+}
+
+function decryptVigenere(text: string, key: number[]) {
+  return text.split("").map((character, index) => {
+    const position = ALPHABET.indexOf(character);
+    return ALPHABET[(position - key[index % key.length] + ALPHABET.length) % ALPHABET.length];
+  }).join("");
+}
+
+function findRepeatedSequences(text: string) {
+  const repetitions: { sequence: string; positions: number[]; distance: number }[] = [];
+  for (let length = 3; length <= 5; length += 1) {
+    const occurrences = new Map<string, number[]>();
+    for (let index = 0; index <= text.length - length; index += 1) {
+      const sequence = text.slice(index, index + length);
+      occurrences.set(sequence, [...(occurrences.get(sequence) ?? []), index]);
+    }
+    for (const [sequence, positions] of occurrences) {
+      if (positions.length < 2) continue;
+      for (let index = 1; index < positions.length; index += 1) {
+        repetitions.push({ sequence, positions, distance: positions[index] - positions[index - 1] });
+      }
+    }
+  }
+  return repetitions;
+}
+
+function getFactors(value: number) {
+  const factors: number[] = [];
+  for (let factor = 2; factor <= 12; factor += 1) {
+    if (value % factor === 0) factors.push(factor);
+  }
+  return factors;
+}
+
+function averageColumnIc(text: string, keyLength: number) {
+  const columnIcs = Array.from({ length: keyLength }, (_, columnIndex) => {
+    const column = [...text].filter((_, index) => index % keyLength === columnIndex).join("");
+    return calculateIc(column);
+  });
+  return columnIcs.reduce((sum, value) => sum + value, 0) / keyLength;
+}
+
+function columnChiSquare(column: string, shift: number) {
+  const decrypted = decryptCaesar(column, shift);
+  const counts = [...ALPHABET].map((character) => decrypted.split(character).length - 1);
+  return counts.reduce((score, count, index) => {
+    const expected = column.length * (SPANISH_FREQUENCIES[index] / 100);
+    return score + (expected > 0 ? ((count - expected) ** 2) / expected : 0);
+  }, 0);
+}
+
+function solveVigenere(text: string, keyLength: number) {
+  const key = Array.from({ length: keyLength }, (_, columnIndex) => {
+    const column = [...text].filter((_, index) => index % keyLength === columnIndex).join("");
+    return Array.from({ length: ALPHABET.length }, (_, shift) => ({
+      shift,
+      score: columnChiSquare(column, shift),
+    })).sort((first, second) => first.score - second.score)[0].shift;
+  });
+  // Refina cada columna usando la coherencia de todo el texto, no solo su frecuencia local.
+  for (let pass = 0; pass < 4; pass += 1) {
+    for (let columnIndex = 0; columnIndex < keyLength; columnIndex += 1) {
+      const bestShift = Array.from({ length: ALPHABET.length }, (_, shift) => {
+        const trialKey = [...key];
+        trialKey[columnIndex] = shift;
+        const trialText = decryptVigenere(text, trialKey);
+        return { shift, score: scoreCandidate(trialText) };
+      }).sort((first, second) => second.score - first.score)[0].shift;
+      key[columnIndex] = bestShift;
+    }
+  }
+  return { key: key.map((shift) => ALPHABET[shift]).join(""), text: decryptVigenere(text, key) };
 }
 
 export default function Home() {
@@ -116,8 +192,43 @@ export default function Home() {
       }),
     ).sort((first, second) => second.score - first.score)[0];
   }, [normalizedText]);
+  const kasiskiAnalysis = useMemo(() => {
+    if (!normalizedText) return { repetitions: [], candidates: [], best: null };
+    const repetitions = findRepeatedSequences(normalizedText);
+    const factorCounts = new Map<number, number>();
+    for (const repetition of repetitions) {
+      for (const factor of getFactors(repetition.distance)) {
+        factorCounts.set(factor, (factorCounts.get(factor) ?? 0) + 1);
+      }
+    }
+    const candidates = Array.from({ length: 11 }, (_, index) => index + 2)
+      .map((length) => {
+        const factorScore = factorCounts.get(length) ?? 0;
+        const columnIc = averageColumnIc(normalizedText, length);
+        const solved = solveVigenere(normalizedText, length);
+        const icScore = Math.max(0, 1 - Math.abs(columnIc - 0.077) / 0.077);
+        return {
+          length,
+          score: factorScore,
+          columnIc,
+          plaintextScore: scoreCandidate(solved.text),
+          key: solved.key,
+          text: solved.text,
+          ranking: factorScore * 10 + icScore * 20 + scoreCandidate(solved.text),
+        };
+      })
+      .sort((first, second) => second.ranking - first.ranking);
+    const best = candidates[0];
+    return {
+      repetitions: repetitions.slice(0, 8),
+      candidates,
+      best: best ? { length: best.length, key: best.key, text: best.text } : null,
+    };
+  }, [normalizedText]);
   const identifiedCipher = bestAffineCandidate
-    ? bestAffineCandidate.a === 1
+    ? ic >= 0.03 && ic <= 0.055
+      ? "Vigenère"
+      : bestAffineCandidate.a === 1
       ? "César"
       : "Afín"
     : null;
@@ -185,7 +296,11 @@ export default function Home() {
                         <span className={`inline-flex rounded-md px-2.5 py-0.5 text-lg font-bold ${identifiedCipher === "César" ? "bg-blue-600 text-white" : "bg-emerald-600 text-white"}`}>
                           {identifiedCipher}
                         </span>
-                        <span className="ml-1">. Mejor clave encontrada: a = {bestAffineCandidate?.a}, b = {bestAffineCandidate?.b}.</span>
+                        <span className="ml-1">
+                          {identifiedCipher === "Vigenère"
+                            ? `. Longitud estimada: L = ${kasiskiAnalysis.best?.length}, clave: ${kasiskiAnalysis.best?.key}.`
+                            : `. Mejor clave encontrada: a = ${bestAffineCandidate?.a}, b = ${bestAffineCandidate?.b}.`}
+                        </span>
                       </>
                     )
                     : ic >= 0.03
@@ -300,6 +415,43 @@ export default function Home() {
                   <p className="text-sm font-medium">Mensaje descifrado con la clave introducida</p>
                   <p className="mt-2 break-all font-mono text-sm leading-6">{manualAffineText || "..."}</p>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Ataque Kasiski</CardTitle>
+                <CardDescription>Busca secuencias repetidas para estimar la longitud de la clave Vigenère.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {kasiskiAnalysis.best ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-violet-700">Longitud estimada</p>
+                        <p className="mt-1 text-2xl font-semibold text-violet-950">L = {kasiskiAnalysis.best.length}</p>
+                      </div>
+                      <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-violet-700">Clave recuperada</p>
+                        <p className="mt-1 text-2xl font-semibold tracking-widest text-violet-950">{kasiskiAnalysis.best.key}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Factores detectados: {kasiskiAnalysis.candidates.filter(({ score }) => score > 0).slice(0, 5).map(({ length, score }) => `L=${length} (${score})`).join(", ") || "sin coincidencias repetidas"}.
+                    </p>
+                    <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-4">
+                      <p className="text-sm font-medium">Texto descifrado con Kasiski</p>
+                      <p className="mt-2 break-all font-mono text-sm leading-6">{kasiskiAnalysis.best.text}</p>
+                    </div>
+                    {kasiskiAnalysis.repetitions.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Secuencias repetidas: {kasiskiAnalysis.repetitions.map(({ sequence, distance }) => `${sequence} (${distance})`).join(", ")}.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Introduce un criptograma para ejecutar Kasiski.</p>
+                )}
               </CardContent>
             </Card>
           </div>

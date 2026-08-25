@@ -245,7 +245,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-white px-4 py-10 text-foreground sm:px-8">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-8">
         <header className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Proyecto / Criptoanálisis</p>
           <h1 className="text-3xl font-semibold tracking-tight">Desencriptar</h1>

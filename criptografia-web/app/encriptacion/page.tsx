@@ -78,7 +78,7 @@ export default function EncriptacionPage() {
     <main className="min-h-[calc(100svh-3.5rem)] bg-white px-4 py-10 sm:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
         <header className="space-y-2">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Proyecto 1 / Criptografia</p>
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Proyecto / Criptografia</p>
           <h1 className="text-3xl font-semibold tracking-tight">Encriptacion</h1>
           <p className="max-w-2xl text-muted-foreground">Normaliza el texto y aplica un cifrado Cesar, Afin o Vigenere con el alfabeto espanol de 27 caracteres.</p>
         </header>

@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Proyecto 1",
-  description: "Proyecto 1 de criptografía",
+  title: "Criptografía - Seguridad de la información",
+  description: "Proyecto de criptografía",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

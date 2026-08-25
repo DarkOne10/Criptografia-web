@@ -247,9 +247,9 @@ export default function Home() {
     <main className="min-h-screen bg-white px-4 py-10 text-foreground sm:px-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <header className="space-y-2">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Proyecto 1 / Criptoanálisis</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Cifrado César</h1>
-          <p className="max-w-2xl text-muted-foreground">Normaliza el criptograma, calcula su IC e identifica si corresponde a César o Afín.</p>
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">Proyecto / Criptoanálisis</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Desencriptar</h1>
+          <p className="max-w-2xl text-muted-foreground">Normaliza el criptograma, calcula su IC e identifica si corresponde a César, Afín o Vigenère.</p>
         </header>
 
         <Card>
@@ -274,7 +274,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <section className="grid items-start gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <section className="grid items-start gap-6 lg:grid-cols-[0.8fr_1.2fr_1.4fr]">
           <div className="flex flex-col gap-6">
             <Card>
               <CardHeader>
@@ -461,25 +461,25 @@ export default function Home() {
             </Card>
             )}
           </div>
-        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Gráfica de frecuencias</CardTitle>
-            <CardDescription>Distribución local de las letras del criptograma normalizado.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[280px] w-full">
-              <BarChart accessibilityLayer data={frequencies} margin={{ top: 8, right: 8, left: -16, bottom: 8 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="character" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={32} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Gráfica de frecuencias</CardTitle>
+              <CardDescription>Distribución local de las letras del criptograma normalizado.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[280px] w-full">
+                <BarChart accessibilityLayer data={frequencies} margin={{ top: 8, right: 8, left: -16, bottom: 8 }}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis dataKey="character" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={32} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </section>
 
         {selectedCandidate && (
           <Card>

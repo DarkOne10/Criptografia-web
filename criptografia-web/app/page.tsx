@@ -325,6 +325,7 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-6">
+            {identifiedCipher === "César" && (
             <Collapsible open={isBruteForceOpen} onOpenChange={setIsBruteForceOpen}>
             <Card>
               <CardHeader>
@@ -362,7 +363,9 @@ export default function Home() {
               </CardContent>
             </Card>
             </Collapsible>
+            )}
 
+            {identifiedCipher === "Afín" && (
             <Card>
               <CardHeader>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -417,7 +420,9 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
+            {identifiedCipher === "Vigenère" && (
             <Card>
               <CardHeader>
                 <CardTitle>Ataque Kasiski</CardTitle>
@@ -454,6 +459,7 @@ export default function Home() {
                 )}
               </CardContent>
             </Card>
+            )}
           </div>
         </section>
 

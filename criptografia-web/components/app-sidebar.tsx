@@ -36,7 +36,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
         <div className="px-2 py-1">
-          <p className="text-sm font-semibold">Proyecto 1</p>
+          <p className="text-sm font-semibold">Proyecto</p>
           <p className="text-xs text-muted-foreground">Criptografia</p>
         </div>
       </SidebarHeader>

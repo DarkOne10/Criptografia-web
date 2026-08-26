@@ -167,6 +167,7 @@ export default function Home() {
   const [isBruteForceOpen, setIsBruteForceOpen] = useState(false);
   const [affineA, setAffineA] = useState("5");
   const [affineB, setAffineB] = useState("7");
+  const [affineInputText, setAffineInputText] = useState<string | null>(null);
   const normalizedText = useMemo(() => normalizeText(rawText), [rawText]);
   const ic = useMemo(() => calculateIc(normalizedText), [normalizedText]);
   const frequencies = useMemo(() => {
@@ -232,8 +233,18 @@ export default function Home() {
       ? "César"
       : "Afín"
     : null;
-  const affineAValue = Number(affineA);
-  const affineBValue = Number(affineB);
+  const displayedAffineA = affineInputText === normalizedText
+    ? affineA
+    : identifiedCipher === "Afín" && bestAffineCandidate
+      ? String(bestAffineCandidate.a)
+      : "";
+  const displayedAffineB = affineInputText === normalizedText
+    ? affineB
+    : identifiedCipher === "Afín" && bestAffineCandidate
+      ? String(bestAffineCandidate.b)
+      : "";
+  const affineAValue = Number(displayedAffineA);
+  const affineBValue = Number(displayedAffineB);
   const isAffineKeyValid = Number.isInteger(affineAValue)
     && COPRIME_VALUES.includes(affineAValue)
     && Number.isInteger(affineBValue)
@@ -384,8 +395,8 @@ export default function Home() {
                         min="0"
                         max="26"
                         step="1"
-                        value={affineA}
-                        onChange={(event) => setAffineA(event.target.value)}
+                        value={displayedAffineA}
+                        onChange={(event) => { setAffineInputText(normalizedText); setAffineA(event.target.value); }}
                         aria-label="Valor a de la clave afín"
                       />
                     </label>
@@ -397,8 +408,8 @@ export default function Home() {
                         min="0"
                         max="26"
                         step="1"
-                        value={affineB}
-                        onChange={(event) => setAffineB(event.target.value)}
+                        value={displayedAffineB}
+                        onChange={(event) => { setAffineInputText(normalizedText); setAffineB(event.target.value); }}
                         aria-label="Valor b de la clave afín"
                       />
                     </label>

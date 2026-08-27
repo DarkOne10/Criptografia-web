@@ -147,6 +147,7 @@ export default function EncriptacionPage() {
                 <input
                   className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm uppercase outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                   type="text"
+                  maxLength={30}
                   placeholder="Ejemplo: SEGURIDAD"
                   value={vigenereKey}
                   onChange={(event) => setVigenereKey(event.target.value)}

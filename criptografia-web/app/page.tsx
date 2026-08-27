@@ -115,7 +115,7 @@ function findRepeatedSequences(text: string) {
 
 function getFactors(value: number) {
   const factors: number[] = [];
-  for (let factor = 2; factor <= 12; factor += 1) {
+  for (let factor = 2; factor <= 30; factor += 1) {
     if (value % factor === 0) factors.push(factor);
   }
   return factors;
@@ -202,20 +202,25 @@ export default function Home() {
         factorCounts.set(factor, (factorCounts.get(factor) ?? 0) + 1);
       }
     }
-    const candidates = Array.from({ length: 11 }, (_, index) => index + 2)
+    const maximumKeyLength = Math.min(30, Math.max(2, Math.floor(normalizedText.length / 10)));
+    const maximumFactorScore = Math.max(1, ...factorCounts.values());
+    const candidates = Array.from({ length: maximumKeyLength - 1 }, (_, index) => index + 2)
       .map((length) => {
         const factorScore = factorCounts.get(length) ?? 0;
+        const normalizedFactorScore = factorScore / maximumFactorScore;
         const columnIc = averageColumnIc(normalizedText, length);
         const solved = solveVigenere(normalizedText, length);
         const icScore = Math.max(0, 1 - Math.abs(columnIc - 0.077) / 0.077);
+        const columnSizeScore = Math.min(1, normalizedText.length / (length * 12));
+        const normalizedPlaintextScore = scoreCandidate(solved.text) / normalizedText.length;
         return {
           length,
           score: factorScore,
           columnIc,
-          plaintextScore: scoreCandidate(solved.text),
+          plaintextScore: normalizedPlaintextScore,
           key: solved.key,
           text: solved.text,
-          ranking: factorScore * 10 + icScore * 20 + scoreCandidate(solved.text),
+          ranking: normalizedFactorScore * 10 + icScore * 100 + normalizedPlaintextScore * 100 * columnSizeScore,
         };
       })
       .sort((first, second) => second.ranking - first.ranking);

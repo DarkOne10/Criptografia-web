@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { LockKeyhole, LockOpen } from "lucide-react"
+import { LockKeyhole, LockOpen, LogIn, UserRoundPlus } from "lucide-react"
 import { usePathname } from "next/navigation"
 import {
   Sidebar,
@@ -26,6 +26,16 @@ const items = [
     title: "Encriptacion",
     href: "/encriptacion",
     icon: LockKeyhole,
+  },
+  {
+    title: "Login",
+    href: "/login",
+    icon: LogIn,
+  },
+  {
+    title: "Registro",
+    href: "/register",
+    icon: UserRoundPlus,
   },
 ]
 

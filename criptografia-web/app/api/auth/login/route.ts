@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       [user.id],
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       message: "Inicio de sesión exitoso.",
       user: {
@@ -106,6 +106,20 @@ export async function POST(request: Request) {
         role: user.role_name,
       },
     });
+
+    response.cookies.set("auth_session", JSON.stringify({
+      id: user.id,
+      username: user.username,
+      role: user.role_name,
+    }), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(

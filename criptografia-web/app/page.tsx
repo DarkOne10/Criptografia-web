@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -162,12 +163,30 @@ function solveVigenere(text: string, keyLength: number) {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [rawText, setRawText] = useState("");
   const [selectedShift, setSelectedShift] = useState<number | null>(null);
   const [isBruteForceOpen, setIsBruteForceOpen] = useState(false);
   const [affineA, setAffineA] = useState("5");
   const [affineB, setAffineB] = useState("7");
   const [affineInputText, setAffineInputText] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetch("/api/auth/session")
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data.ok) {
+          router.replace("/register");
+          return;
+        }
+        setIsCheckingSession(false);
+      })
+      .catch(() => {
+        router.replace("/register");
+      });
+  }, [router]);
+
   const normalizedText = useMemo(() => normalizeText(rawText), [rawText]);
   const ic = useMemo(() => calculateIc(normalizedText), [normalizedText]);
   const frequencies = useMemo(() => {
@@ -258,6 +277,10 @@ export default function Home() {
   const manualAffineText = isAffineKeyValid
     ? decryptAffine(normalizedText, affineAValue, affineBValue)
     : "";
+
+  if (isCheckingSession) {
+    return <main className="flex min-h-[calc(100vh-5rem)] items-center justify-center bg-white text-sm text-muted-foreground">Verificando sesión...</main>;
+  }
 
   return (
     <main className="min-h-screen bg-white px-4 py-10 text-foreground sm:px-8">

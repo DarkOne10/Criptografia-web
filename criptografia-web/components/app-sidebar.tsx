@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { LockKeyhole, LockOpen, LogIn, UserRoundPlus } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { LockKeyhole, LockOpen, LogIn, LogOut, UserRoundPlus } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +41,13 @@ const items = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" })
+    router.replace("/register")
+    router.refresh()
+  }
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -66,6 +73,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <LogOut />
+                  <span>Cerrar sesión</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

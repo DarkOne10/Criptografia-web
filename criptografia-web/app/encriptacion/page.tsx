@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -49,12 +50,33 @@ function encryptVigenere(plaintext: string, key: string) {
 }
 
 export default function EncriptacionPage() {
+  const router = useRouter();
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [rawText, setRawText] = useState("");
   const [cipherMethod, setCipherMethod] = useState("cesar");
   const [shift, setShift] = useState(0);
   const [affineA, setAffineA] = useState("5");
   const [affineB, setAffineB] = useState("7");
   const [vigenereKey, setVigenereKey] = useState("");
+
+  useEffect(() => {
+    void fetch("/api/auth/session")
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data.ok) {
+          router.replace("/register");
+          return;
+        }
+        setIsCheckingSession(false);
+      })
+      .catch(() => {
+        router.replace("/register");
+      });
+  }, [router]);
+
+  if (isCheckingSession) {
+    return <main className="flex min-h-[calc(100vh-5rem)] items-center justify-center bg-white text-sm text-muted-foreground">Verificando sesión...</main>;
+  }
 
   const normalizedText = useMemo(() => normalizeText(rawText), [rawText]);
   const normalizedVigenereKey = useMemo(() => normalizeText(vigenereKey), [vigenereKey]);

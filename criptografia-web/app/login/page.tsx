@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +16,23 @@ import {
 } from "@/components/ui/card";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    void fetch("/api/auth/session")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.ok) {
+          router.replace("/");
+        }
+      })
+      .catch(() => undefined);
+  }, [router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,6 +59,7 @@ export default function LoginPage() {
       setMessage(`Bienvenido ${data.user.username}. Rol: ${data.user.role}`);
       setUsername("");
       setPassword("");
+      window.location.href = "/";
     } catch (error) {
       setIsSuccess(false);
       setMessage(error instanceof Error ? error.message : "Error inesperado.");

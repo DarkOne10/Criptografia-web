@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       [username, passwordHash, roleId],
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       message: "Usuario registrado correctamente.",
       user: {
@@ -86,6 +86,20 @@ export async function POST(request: Request) {
         role,
       },
     });
+
+    response.cookies.set("auth_session", JSON.stringify({
+      id: result.rows[0].id,
+      username: result.rows[0].username,
+      role,
+    }), {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return response;
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(

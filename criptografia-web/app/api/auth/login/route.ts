@@ -2,11 +2,25 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
 import { initializeDatabase, pool } from "@/lib/db";
+import { checkLoginBlocked, getClientIp, registerFailedLogin, resetLoginAttempts } from "@/lib/bruteforce";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    const blockedCheck = checkLoginBlocked(request);
+
+    if (blockedCheck.blocked) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Demasiados intentos. La IP está bloqueada temporalmente.",
+          retryAfter: blockedCheck.retryAfter,
+        },
+        { status: 429 },
+      );
+    }
+
     await initializeDatabase();
 
     const body = (await request.json()) as {
@@ -41,6 +55,18 @@ export async function POST(request: Request) {
     const user = result.rows[0];
 
     if (!user) {
+      const failed = registerFailedLogin(request);
+      if (failed.blocked) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Demasiados intentos. La IP está bloqueada temporalmente.",
+            retryAfter: failed.retryAfter,
+          },
+          { status: 429 },
+        );
+      }
+
       return NextResponse.json(
         {
           ok: false,
@@ -63,6 +89,18 @@ export async function POST(request: Request) {
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
+      const failed = registerFailedLogin(request);
+      if (failed.blocked) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: "Demasiados intentos. La IP está bloqueada temporalmente.",
+            retryAfter: failed.retryAfter,
+          },
+          { status: 429 },
+        );
+      }
+
       const nextIntentos = Number(user.intentos_fallidos) + 1;
       const bloqueo = nextIntentos >= 5;
 
@@ -86,6 +124,9 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+
+    const ip = getClientIp(request);
+    resetLoginAttempts(ip);
 
     await pool.query(
       `

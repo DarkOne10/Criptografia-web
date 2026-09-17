@@ -74,10 +74,6 @@ export default function EncriptacionPage() {
       });
   }, [router]);
 
-  if (isCheckingSession) {
-    return <main className="flex min-h-[calc(100vh-5rem)] items-center justify-center bg-white text-sm text-muted-foreground">Verificando sesión...</main>;
-  }
-
   const normalizedText = useMemo(() => normalizeText(rawText), [rawText]);
   const normalizedVigenereKey = useMemo(() => normalizeText(vigenereKey), [vigenereKey]);
   const affineAValue = Number(affineA);
@@ -95,6 +91,10 @@ export default function EncriptacionPage() {
     }
     return encryptVigenere(normalizedText, normalizedVigenereKey);
   }, [normalizedText, shift, cipherMethod, affineAValue, affineBValue, isAffineKeyValid, normalizedVigenereKey]);
+
+  if (isCheckingSession) {
+    return <main className="flex min-h-[calc(100vh-5rem)] items-center justify-center bg-white text-sm text-muted-foreground">Verificando sesión...</main>;
+  }
 
   return (
     <main className="min-h-[calc(100svh-3.5rem)] bg-white px-4 py-10 sm:px-8">

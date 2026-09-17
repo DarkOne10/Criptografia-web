@@ -173,7 +173,7 @@ export default function Home() {
   const [affineInputText, setAffineInputText] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch("/api/auth/session")
+    void fetch("/api/auth/session", { credentials: "include" })
       .then((response) => response.json())
       .then((data) => {
         if (!data.ok) {

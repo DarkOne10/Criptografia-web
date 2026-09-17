@@ -38,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     async function loadSession() {
       try {
-        const response = await fetch("/api/auth/session")
+        const response = await fetch("/api/auth/session", { credentials: "include" })
         const data = await response.json()
 
         if (response.ok && data.ok) {

@@ -26,7 +26,7 @@ export default function RegisterPage() {
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    void fetch("/api/auth/session")
+    void fetch("/api/auth/session", { credentials: "include" })
       .then((response) => response.json())
       .then((data) => {
         if (data.ok) {
@@ -51,6 +51,7 @@ export default function RegisterPage() {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

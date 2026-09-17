@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
 import { getRoleIdByName, initializeDatabase, pool } from "@/lib/db";
+import { getSessionCookieOptions } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -91,13 +92,7 @@ export async function POST(request: Request) {
       id: result.rows[0].id,
       username: result.rows[0].username,
       role,
-    }), {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    }), getSessionCookieOptions(request));
 
     return response;
   } catch (error) {

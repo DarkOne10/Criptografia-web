@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
-import { initializeDatabase, pool } from "@/lib/db";
 import { checkLoginBlocked, getClientIp, registerFailedLogin, resetLoginAttempts } from "@/lib/bruteforce";
+import { initializeDatabase, pool } from "@/lib/db";
+import { getSessionCookieOptions } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -152,13 +153,7 @@ export async function POST(request: Request) {
       id: user.id,
       username: user.username,
       role: user.role_name,
-    }), {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    }), getSessionCookieOptions(request));
 
     return response;
   } catch (error) {
